@@ -77,7 +77,7 @@ class ModelScoreCalculator(StatCalculator):
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: WhiteboxModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
         **kwargs,
     ) -> Dict[str, np.ndarray]:
         # inp_tokens = dependencies["input_tokens"]

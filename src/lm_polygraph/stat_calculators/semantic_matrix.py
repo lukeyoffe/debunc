@@ -26,7 +26,6 @@ class SemanticMatrixCalculator(StatCalculator):
             ],
             ["blackbox_sample_texts"],
         )
-        self.is_deberta_setup = False
         self.nli_model = nli_model
 
     def __call__(
@@ -34,7 +33,7 @@ class SemanticMatrixCalculator(StatCalculator):
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: WhiteboxModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
     ) -> Dict[str, np.ndarray]:
         """
         Calculates the NLI semantic matrix for generation samples using DeBERTa model.
@@ -45,7 +44,7 @@ class SemanticMatrixCalculator(StatCalculator):
                     for each input text in the batch.
             texts (List[str]): Input texts batch used for model generation.
             model (Model): Model used for generation.
-            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 100.
+            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 1024.
         Returns:
             Dict[str, np.ndarray]: dictionary with the following items:
                 - 'semantic_matrix_entail' (List[np.array]): for each input text: quadratic matrix of size
@@ -56,6 +55,7 @@ class SemanticMatrixCalculator(StatCalculator):
                     n_samples x n_samples, with the NLI label id corresponding to the DeBERTa prediction.
         """
 
+        self.nli_model.setup()
         deberta = self.nli_model
         deberta_batch_size = deberta.batch_size
         batch_texts = dependencies["blackbox_sample_texts"]

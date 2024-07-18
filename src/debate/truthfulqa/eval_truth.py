@@ -96,3 +96,8 @@ def get_stats(filename):
         "incorrect_uncertainties": incorrect_uncertainties,
         "fail_uncertainties": fail_uncertainties,
     }
+
+
+if __name__ == "__main__":
+    FILENAME = ""
+    eval(FILENAME)

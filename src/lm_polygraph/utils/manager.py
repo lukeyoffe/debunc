@@ -243,8 +243,8 @@ class UEManager:
         deberta_batch_size: int = 10,
         deberta_device: Optional[str] = None,
         verbose: bool = True,
-        max_new_tokens: int = 100,
-        background_train_dataset_max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
+        background_train_dataset_max_new_tokens: int = 1024,
         cache_path=os.path.expanduser("~") + "/.cache",
     ):
         """

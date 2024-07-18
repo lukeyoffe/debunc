@@ -3,10 +3,9 @@ from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
-from lm_polygraph.utils.modeling_mistral import RangeWeight
+from debate.gen_utils import Conversation, Message, get_len
+from models.common import RangeWeight
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
-
-from gen_utils import Conversation, Message, get_len
 
 LAST_LINE_INST = "The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD."
 
@@ -37,7 +36,7 @@ def construct_message_standard(
     return {"role": "user", "content": prefix_string}
 
 
-def construct_message_prompt_no_conf(
+def construct_message_prompt(
     other_agents: List[Conversation],
     other_confidences: np.ndarray,
     conv_idx: int,
@@ -138,7 +137,6 @@ Answer the following multiple choice question. {LAST_LINE_INST} Think step by st
 
 
 def parse_question_answer_few_shot(df, dev_df, ix, num_shots):
-    # print(dev_df)
     sep = "\n\n"
     question = f"""
 Answer the following multiple choice question.

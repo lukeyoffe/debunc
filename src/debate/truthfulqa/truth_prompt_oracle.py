@@ -1,28 +1,23 @@
-import os
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
-
 import json
 from typing import List
 
 import numpy as np
 import torch
-from common import (
-    construct_message_prompt_no_conf,
-    gen_question,
-)
-from eval_truth import parse_answer
-from lm_polygraph.estimators.token_entropy import MeanTokenEntropy
-from lm_polygraph.utils.model import WhiteboxModel
-from tqdm import tqdm, trange
-from transformers import AutoTokenizer
-
-from gen_utils import (
+from debate.gen_utils import (
     Debate,
     Debates,
     construct_assistant_message,
     generate_answer_uncertainty,
 )
+from debate.truthfulqa.common import (
+    construct_message_prompt,
+    gen_question,
+)
+from debate.truthfulqa.eval_truth import parse_answer
+from lm_polygraph.estimators import MeanTokenEntropy, TokenSAR
+from models.model import WhiteboxModel
+from tqdm import tqdm, trange
+from transformers import AutoTokenizer
 
 tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
 model = WhiteboxModel.from_pretrained(
@@ -65,7 +60,7 @@ if __name__ == "__main__":
                             agent_contexts[:i] + agent_contexts[i + 1 :]
                         )
                         other_confidences = confidences[:i] + confidences[i + 1 :]
-                        message = construct_message_prompt_no_conf(
+                        message = construct_message_prompt(
                             other_agents=agent_contexts_other,
                             other_confidences=other_confidences,
                             conv_idx=2 * round - 1,
@@ -86,7 +81,7 @@ if __name__ == "__main__":
                 json.dump(
                     all_trial_data,
                     open(
-                        f"truth_{agents}_{rounds}_{trials}_prompt_no_conf_perfect.json",
+                        f"truth_{agents}_{rounds}_{trials}_prompt_oracle.json",
                         "w",
                     ),
                 )

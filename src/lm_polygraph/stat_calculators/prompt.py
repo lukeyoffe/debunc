@@ -50,7 +50,7 @@ class PromptCalculator(StatCalculator):
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: WhiteboxModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
         **kwargs,
     ) -> Dict[str, np.ndarray]:
         """
@@ -62,7 +62,7 @@ class PromptCalculator(StatCalculator):
                 - 'sample_texts' (List[List[str]]): several sampling generations for each input text.
             texts (List[str]): Input texts batch used for model generation.
             model (Model): Model used for generation.
-            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 100.
+            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 1024.
         Returns:
             Dict[str, np.ndarray]: dictionary with the following items:
                 - `method` (List[float]): logarithms of probability of generating `expected` from prompt formatted

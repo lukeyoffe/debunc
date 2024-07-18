@@ -1,28 +1,23 @@
-import os
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"  # entropy was on 1
-
 import json
 from typing import List
 
 import numpy as np
 import torch
-from common import (
-    construct_message_prompt_no_conf,
-    gen_question,
-)
-from lm_polygraph.estimators import TokenSAR
-from lm_polygraph.utils.model import WhiteboxModel
-from tqdm import tqdm, trange
-from transformers import AutoTokenizer
-
-from gen_utils import (
+from debate.gen_utils import (
     Debate,
     Debates,
     construct_assistant_message,
     generate_answer_uncertainty,
     unc_to_confidence,
 )
+from debate.truthfulqa.common import (
+    construct_message_prompt,
+    gen_question,
+)
+from lm_polygraph.estimators import MeanTokenEntropy, TokenSAR
+from models.model import WhiteboxModel
+from tqdm import tqdm, trange
+from transformers import AutoTokenizer
 
 tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
 model = WhiteboxModel.from_pretrained(
@@ -31,7 +26,7 @@ model = WhiteboxModel.from_pretrained(
     torch_dtype=torch.bfloat16,
 )
 
-ue_method = TokenSAR()
+ue_method = MeanTokenEntropy
 
 
 if __name__ == "__main__":
@@ -69,7 +64,7 @@ if __name__ == "__main__":
                         other_confidences = np.concatenate(
                             (confidences[:i], confidences[i + 1 :])
                         )
-                        message = construct_message_prompt_no_conf(
+                        message = construct_message_prompt(
                             other_agents=agent_contexts_other,
                             other_confidences=other_confidences,
                             conv_idx=2 * round - 1,
@@ -89,7 +84,7 @@ if __name__ == "__main__":
                 json.dump(
                     all_trial_data,
                     open(
-                        f"truth_{agents}_{rounds}_{trials}_prompt_no_conf_{ue_method.__class__.__name__}.json",
+                        f"truth_{agents}_{rounds}_{trials}_prompt_{ue_method.__class__.__name__}.json",
                         "w",
                     ),
                 )

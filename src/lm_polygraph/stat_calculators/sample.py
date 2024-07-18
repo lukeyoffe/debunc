@@ -25,7 +25,7 @@ class BlackboxSamplingGenerationCalculator(StatCalculator):
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: BlackboxModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
     ) -> Dict[str, np.ndarray]:
         """
         Calculates sampled texts for Blackbox model on the input batch.
@@ -34,7 +34,7 @@ class BlackboxSamplingGenerationCalculator(StatCalculator):
             dependencies (Dict[str, np.ndarray]): input statistics, can be empty (not used).
             texts (List[str]): Input texts batch used for model generation.
             model (Model): Model used for generation.
-            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 100.
+            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 1024.
         Returns:
             Dict[str, np.ndarray]: dictionary with List[List[str]] sampled texts at 'blackbox_sample_texts' key.
         """
@@ -107,7 +107,7 @@ class SamplingGenerationCalculator(StatCalculator):
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: WhiteboxModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
     ) -> Dict[str, np.ndarray]:
         """
         Calculates the statistics of sampling texts.
@@ -116,7 +116,7 @@ class SamplingGenerationCalculator(StatCalculator):
             dependencies (Dict[str, np.ndarray]): input statistics, can be empty (not used).
             texts (List[str]): Input texts batch used for model generation.
             model (Model): Model used for generation.
-            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 100.
+            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 1024.
         Returns:
             Dict[str, np.ndarray]: dictionary with the following items:
                 - 'sample_texts' (List[List[str]]): `samples_n` texts for each input text in the batch,

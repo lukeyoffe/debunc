@@ -1,29 +1,24 @@
-import os
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
-
 import json
 from typing import List
 
 import numpy as np
 import torch
-from common import (
+from debate.arithmetic.common import (
     construct_message_attention_others,
     gen_question,
 )
-from eval_arith import parse_answer
-from lm_polygraph.estimators.token_entropy import MeanTokenEntropy
-from lm_polygraph.utils.model import WhiteboxModel
-from tqdm import trange
-from transformers import AutoTokenizer
-
-from gen_utils import (
+from debate.arithmetic.eval_arith import parse_answer
+from debate.gen_utils import (
     Debate,
     Debates,
     RWJSONEncoder,
     construct_assistant_message,
     generate_answer_uncertainty,
 )
+from lm_polygraph.estimators import MeanTokenEntropy, TokenSAR
+from models.model import WhiteboxModel
+from tqdm import trange
+from transformers import AutoTokenizer
 
 tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
 model = WhiteboxModel.from_pretrained(
@@ -88,7 +83,7 @@ if __name__ == "__main__":
                 json.dump(
                     all_trial_data,
                     open(
-                        f"arith_{agents}_{rounds}_{trials}_attention_perfect.json",
+                        f"arith_{agents}_{rounds}_{trials}_attention_others_oracle.json",
                         "w",
                     ),
                     cls=RWJSONEncoder,

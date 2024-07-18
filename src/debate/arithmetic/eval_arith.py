@@ -2,14 +2,12 @@ import json
 import re
 
 import numpy as np
-
 from debate.eval_utils import (
     get_uncertainties,
     get_uncertainties_round,
     mean_and_95ci,
     most_frequent,
 )
-from lm_polygraph import WhiteboxModel
 
 np.set_printoptions(precision=3)
 
@@ -113,3 +111,8 @@ def get_stats(filename):
         "incorrect_uncertainties": incorrect_uncertainties,
         "fail_uncertainties": fail_uncertainties,
     }
+
+
+if __name__ == "__main__":
+    FILENAME = ""
+    eval(FILENAME)

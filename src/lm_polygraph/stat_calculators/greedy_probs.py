@@ -21,7 +21,7 @@ class BlackboxGreedyTextsCalculator(StatCalculator):
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: BlackboxModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
     ) -> Dict[str, np.ndarray]:
         """
         Calculates generation texts for Blackbox model on the input batch.
@@ -30,7 +30,7 @@ class BlackboxGreedyTextsCalculator(StatCalculator):
             dependencies (Dict[str, np.ndarray]): input statistics, can be empty (not used).
             texts (List[str]): Input texts batch used for model generation.
             model (Model): Model used for generation.
-            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 100.
+            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 1024.
         Returns:
             Dict[str, np.ndarray]: dictionary with List[List[float]] generation texts at 'blackbox_greedy_texts' key.
         """
@@ -76,7 +76,7 @@ class GreedyProbsCalculator(StatCalculator):
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: WhiteboxModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
     ) -> Dict[str, np.ndarray]:
         """
         Calculates the statistics of probabilities at each token position in the generation.
@@ -85,7 +85,7 @@ class GreedyProbsCalculator(StatCalculator):
             dependencies (Dict[str, np.ndarray]): input statistics, can be empty (not used).
             texts (List[str]): Input texts batch used for model generation.
             model (Model): Model used for generation.
-            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 100.
+            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 1024.
         Returns:
             Dict[str, np.ndarray]: dictionary with the following items:
                 - 'input_texts' (List[str]): input texts batch,

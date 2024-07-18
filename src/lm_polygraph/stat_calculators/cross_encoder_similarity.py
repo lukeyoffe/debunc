@@ -29,13 +29,14 @@ class CrossEncoderSampleSimilarityMatrixCalculator(StatCalculator):
         self.crossencoder = CrossEncoder(
             "cross-encoder/stsb-roberta-large", device=device
         )
+        self.crossencoder_setup = True
 
     def __call__(
         self,
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: WhiteboxModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
     ) -> Dict[str, np.ndarray]:
         device = model.device()
         tokenizer = model.tokenizer
@@ -133,13 +134,14 @@ class CrossEncoderTokenSimilarityMatrixCalculator(StatCalculator):
         self.crossencoder = CrossEncoder(
             "cross-encoder/stsb-roberta-large", device=device
         )
+        self.crossencoder_setup = True
 
     def __call__(
         self,
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: WhiteboxModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
     ) -> Dict[str, np.ndarray]:
         device = model.device()
         tokenizer = model.tokenizer

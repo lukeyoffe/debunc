@@ -39,7 +39,7 @@ class StatCalculator(ABC):
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: Model,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
         **kwargs,
     ) -> Dict[str, np.ndarray]:
         """
@@ -50,7 +50,7 @@ class StatCalculator(ABC):
                 statistics calculators for each `stat_dependencies`.
             texts (List[str]): Input texts batch used for model generation.
             model (Model): Model used for generation.
-            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 100.
+            max_new_tokens (int): Maximum number of new tokens at model generation. Default: 1024.
         Returns:
             Dict[str, np.ndarray]: dictionary with calculated statistics under all keys from `stats`.
         """

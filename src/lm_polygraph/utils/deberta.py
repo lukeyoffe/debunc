@@ -31,7 +31,6 @@ class Deberta:
             self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         else:
             self.device = device
-        self.setup()
 
     @property
     def deberta(self):

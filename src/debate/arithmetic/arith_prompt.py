@@ -1,25 +1,21 @@
-import os
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"  # entropy was on 0
-
 import json
 from typing import List
 
 import numpy as np
 import torch
-from common import (
-    construct_message_prompt_no_conf,
+from debate.arithmetic.common import (
+    construct_message_prompt,
     gen_question,
 )
-from gen_utils import (
+from debate.gen_utils import (
     Debate,
     Debates,
     construct_assistant_message,
     generate_answer_uncertainty,
     unc_to_confidence,
 )
-from lm_polygraph.estimators import TokenSAR
-from lm_polygraph.utils.model import WhiteboxModel
+from lm_polygraph.estimators import MeanTokenEntropy, TokenSAR
+from models.model import WhiteboxModel
 from tqdm import trange
 from transformers import AutoTokenizer
 
@@ -30,7 +26,7 @@ model = WhiteboxModel.from_pretrained(
     torch_dtype=torch.bfloat16,
 )
 
-ue_method = TokenSAR()
+ue_method = MeanTokenEntropy
 
 
 if __name__ == "__main__":
@@ -67,7 +63,7 @@ if __name__ == "__main__":
                         other_confidences = np.concatenate(
                             (confidences[:i], confidences[i + 1 :])
                         )
-                        message = construct_message_prompt_no_conf(
+                        message = construct_message_prompt(
                             other_agents=agent_contexts_other,
                             other_confidences=other_confidences,
                             conv_idx=2 * round - 1,
@@ -87,7 +83,7 @@ if __name__ == "__main__":
                 json.dump(
                     all_trial_data,
                     open(
-                        f"arith_{agents}_{rounds}_{trials}_prompt_no_conf_{ue_method.__class__.__name__}.json",
+                        f"arith_{agents}_{rounds}_{trials}_prompt_{ue_method.__class__.__name__}.json",
                         "w",
                     ),
                 )

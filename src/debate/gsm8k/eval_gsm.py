@@ -86,7 +86,6 @@ def uncertainty_stats(filename):
                 incorrect_uncertainties.extend(iu)
                 fail_uncertainties.extend(fu)
             accuracy = compute_accuracy(gt, pred_solutions)
-            # print(accuracy)
             trial_accuracies.append(accuracy)
         trial_accuracy = np.mean(trial_accuracies)
         accuracies.append(trial_accuracy)
@@ -129,3 +128,8 @@ def get_stats(filename):
         "incorrect_uncertainties": incorrect_uncertainties,
         "fail_uncertainties": fail_uncertainties,
     }
+
+
+if __name__ == "__main__":
+    FILENAME = ""
+    eval(FILENAME)

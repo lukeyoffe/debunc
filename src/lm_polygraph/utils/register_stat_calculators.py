@@ -9,6 +9,8 @@ from typing import Dict, List, Optional, Tuple
 
 log = logging.getLogger("lm_polygraph")
 
+nli_model = None
+
 
 def register_stat_calculators(
     deberta_batch_size: int = 10,  # TODO: rename to NLI model
@@ -23,9 +25,11 @@ def register_stat_calculators(
     stat_calculators: Dict[str, "StatCalculator"] = {}
     stat_dependencies: Dict[str, List[str]] = {}
 
-    log.info("=" * 100)
-    log.info("Loading NLI model...")
-    nli_model = Deberta(batch_size=deberta_batch_size, device=deberta_device)
+    global nli_model
+    if nli_model is None:
+        log.info("=" * 100)
+        log.info("Loading NLI model...")
+        nli_model = Deberta(batch_size=deberta_batch_size, device=deberta_device)
 
     log.info("=" * 100)
     log.info("Initializing stat calculators...")
@@ -78,7 +82,8 @@ def register_stat_calculators(
     _register(EmbeddingsCalculator())
     _register(EnsembleTokenLevelDataCalculator())
     _register(SemanticMatrixCalculator(nli_model=nli_model))
-    _register(CrossEncoderSimilarityMatrixCalculator(nli_model=nli_model))
+    _register(CrossEncoderTokenSimilarityMatrixCalculator(nli_model=nli_model))
+    _register(CrossEncoderSampleSimilarityMatrixCalculator(nli_model=nli_model))
     _register(GreedyProbsCalculator(n_alternatives=n_ccp_alternatives))
     _register(GreedyAlternativesNLICalculator(nli_model=nli_model))
     _register(GreedyAlternativesFactPrefNLICalculator(nli_model=nli_model))

@@ -1,16 +1,10 @@
-import os
-
-from gen_utils import generate_answer_standard
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
-
 import json
 import random
 from typing import List
 
 import torch
-from common import (
+from debate.gen_utils import generate_answer_standard
+from debate.gsm8k.common import (
     Conversation,
     Debate,
     Debates,
@@ -21,13 +15,11 @@ from common import (
 from tqdm import trange
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-tokenizer = AutoTokenizer.from_pretrained(
-    "mistralai/Mistral-7B-Instruct-v0.2",
-    )
+tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
 model = AutoModelForCausalLM.from_pretrained(
     "mistralai/Mistral-7B-Instruct-v0.2",
     device_map="auto",
-        torch_dtype=torch.bfloat16,
+    torch_dtype=torch.bfloat16,
 )
 
 
@@ -63,50 +55,49 @@ if __name__ == "__main__":
     trials = 5
 
     random.seed(0)
-    questions = read_jsonl("../data/test.jsonl")
+    questions = read_jsonl("./data/test.jsonl")
     random.shuffle(questions)
 
-    for eight_shot in [False, True]:
-        all_trial_data: List[Debates] = []
-        for trial in trange(trials):
-            response_dict: Debates = {}
-            all_trial_data.append(response_dict)
-            for q_i, data in enumerate(questions[:100]):
-                question = data["question"]
-                answer = data["answer"]
-                formatted_question = format_question(question, eight_shot)
-                agent_contexts: Debate = [
-                    [{"role": "user", "content": formatted_question}]
-                    for agent in range(agents)
-                ]
+    all_trial_data: List[Debates] = []
+    for trial in trange(trials):
+        response_dict: Debates = {}
+        all_trial_data.append(response_dict)
+        for q_i, data in enumerate(questions[:100]):
+            question = data["question"]
+            answer = data["answer"]
+            formatted_question = format_question(question)
+            agent_contexts: Debate = [
+                [{"role": "user", "content": formatted_question}]
+                for agent in range(agents)
+            ]
 
-                for round in range(rounds):
-                    torch.cuda.empty_cache()
-                    for i, agent_context in enumerate(agent_contexts):
-                        if round != 0:
-                            agent_contexts_other = (
-                                agent_contexts[:i] + agent_contexts[i + 1 :]
-                            )
-                            message = construct_message(
-                                question,
-                                other_agents=agent_contexts_other,
-                                conv_idx=2 * round - 1,
-                            )
-                            agent_context.append(message)
-
-                        completion = generate_answer_standard(
-                            agent_context, model, tokenizer
+            for round in range(rounds):
+                torch.cuda.empty_cache()
+                for i, agent_context in enumerate(agent_contexts):
+                    if round != 0:
+                        agent_contexts_other = (
+                            agent_contexts[:i] + agent_contexts[i + 1 :]
                         )
+                        message = construct_message(
+                            question,
+                            other_agents=agent_contexts_other,
+                            conv_idx=2 * round - 1,
+                        )
+                        agent_context.append(message)
 
-                        assistant_message = construct_assistant_message(completion)
-                        agent_context.append(assistant_message)
-
-                    response_dict[question] = (agent_contexts, answer)
-                    all_trial_data[-1] = response_dict
-                    json.dump(
-                        all_trial_data,
-                        open(
-                            f"gsm_{agents}_{rounds}_{trials}_standard_{eight_shot}shot_part4.json",
-                            "w",
-                        ),
+                    completion = generate_answer_standard(
+                        agent_context, model, tokenizer
                     )
+
+                    assistant_message = construct_assistant_message(completion)
+                    agent_context.append(assistant_message)
+
+                response_dict[question] = (agent_contexts, answer)
+                all_trial_data[-1] = response_dict
+                json.dump(
+                    all_trial_data,
+                    open(
+                        f"gsm_{agents}_{rounds}_{trials}_standard.json",
+                        "w",
+                    ),
+                )

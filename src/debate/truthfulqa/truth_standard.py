@@ -1,33 +1,26 @@
-import os
-from typing import List
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
 import json
+from typing import List
 
 import numpy as np
 import torch
-from common import (
+from debate.gen_utils import (
+    Debate,
+    Debates,
+    construct_assistant_message,
+    generate_answer_standard,
+)
+from debate.truthfulqa.common import (
     construct_message_standard,
     gen_question,
 )
 from tqdm import tqdm, trange
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from gen_utils import (
-    Debate,
-    Debates,
-    construct_assistant_message,
-    generate_answer_standard,
-)
-
-tokenizer = AutoTokenizer.from_pretrained(
-    "mistralai/Mistral-7B-Instruct-v0.2",
-    )
+tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
 model = AutoModelForCausalLM.from_pretrained(
     "mistralai/Mistral-7B-Instruct-v0.2",
     device_map="auto",
-        torch_dtype=torch.bfloat16,
+    torch_dtype=torch.bfloat16,
 )
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ class EnsembleTokenLevelDataCalculator(StatCalculator):
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: PreTrainedModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
     ) -> Dict[str, np.ndarray]:
         ensemble_model = dependencies["ensemble_model"]
 

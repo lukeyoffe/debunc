@@ -1,9 +1,9 @@
 from typing import List, Tuple
 
 import numpy as np
+from debate.gen_utils import Conversation, Message, get_len
+from models.common import RangeWeight
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
-from lm_polygraph.utils.modeling_mistral import RangeWeight
-from gen_utils import get_len, Message, Conversation
 
 
 def construct_message_standard(
@@ -23,23 +23,6 @@ Based off the opinion of other agents, can you provide an updated answer? State 
 
 
 def construct_message_prompt(
-    other_agents: List[Conversation],
-    other_confidences: np.ndarray,
-    conv_idx: int,
-) -> Message:
-    prefix_string = "These are solutions and confidence values from 1 to 10 (higher means more confident) to the problem from other agents: "
-
-    for agent, confidence in zip(other_agents, other_confidences):
-        agent_response = agent[conv_idx]["content"]
-        prefix_string += f"\n\n One agent solution (confidence level is {confidence}): ```{agent_response}```"
-
-    prefix_string += """
-
-Based off the opinion of other agents, can you provide an updated answer? State the final answer at the end of your response."""
-    return {"role": "user", "content": prefix_string}
-
-
-def construct_message_prompt_no_conf(
     other_agents: List[Conversation],
     other_confidences: np.ndarray,
     conv_idx: int,

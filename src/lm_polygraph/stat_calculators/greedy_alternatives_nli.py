@@ -60,9 +60,10 @@ class GreedyAlternativesNLICalculator(StatCalculator):
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: WhiteboxModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
         **kwargs,
     ) -> Dict[str, np.ndarray]:
+        self.nli_model.setup()
         greedy_alternatives = dependencies["greedy_tokens_alternatives"]
         greedy_alternatives_nli = []
         for sample_alternatives in greedy_alternatives:
@@ -127,9 +128,10 @@ class GreedyAlternativesFactPrefNLICalculator(StatCalculator):
         dependencies: Dict[str, np.array],
         texts: List[str],
         model: WhiteboxModel,
-        max_new_tokens: int = 100,
+        max_new_tokens: int = 1024,
         **kwargs,
     ) -> Dict[str, np.ndarray]:
+        self.nli_model.setup()
         greedy_alternatives = dependencies["greedy_tokens_alternatives"]
         greedy_tokens = dependencies["greedy_tokens"]
         claims = dependencies["claims"]
