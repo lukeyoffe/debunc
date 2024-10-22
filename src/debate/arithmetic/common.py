@@ -47,10 +47,16 @@ def construct_message_attention_all(
     conv_idx: int,
     tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
 ) -> Message:
+    if "llama" in tokenizer.name_or_path.lower():
+        offset = -1
+    elif "mistral" in tokenizer.name_or_path.lower():
+        offset = 3
+    else:
+        raise ValueError("Unknown tokenizer")
     range_weights = []
     this_agent = this_agent.copy()
     len_before_prev = get_len(this_agent[:-1], tokenizer) + 4
-    current_len = get_len(this_agent, tokenizer) + 3
+    current_len = get_len(this_agent, tokenizer) + offset
     range_weights.append(RangeWeight(len_before_prev, current_len, this_confidence))
 
     prefix_string = "These are solutions to the problem from other agents: "

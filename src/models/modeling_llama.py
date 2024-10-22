@@ -466,7 +466,6 @@ class LlamaAttention(nn.Module):
             and len(range_weights) > 1
             and attn_weights.shape[2] == 1
         ):
-            print("Scaling attention")
             original_sum = torch.sum(
                 torch.stack(
                     [

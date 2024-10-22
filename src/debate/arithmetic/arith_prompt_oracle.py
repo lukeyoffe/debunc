@@ -16,9 +16,10 @@ from models.model import WhiteboxModel
 from tqdm import trange
 from transformers import AutoTokenizer
 
-tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
+model_name = "mistralai/Mistral-7B-Instruct-v0.2"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = WhiteboxModel.from_pretrained(
-    "mistralai/Mistral-7B-Instruct-v0.2",
+    model_name,
     device_map="auto",
     torch_dtype=torch.bfloat16,
 )

@@ -4,11 +4,15 @@ from typing import List
 
 import numpy as np
 import torch
-from debate.gsm8k.common import (
-    Conversation,
+from debate.gen_utils import (
     Debate,
     Debates,
-    Message,
+    RWJSONEncoder,
+    construct_assistant_message,
+    generate_answer_uncertainty,
+)
+from debate.gsm8k.common import (
+    construct_message_prompt,
     format_question,
     read_jsonl,
 )
@@ -18,9 +22,10 @@ from models.model import WhiteboxModel
 from tqdm import tqdm, trange
 from transformers import AutoTokenizer
 
-tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
+model_name = "mistralai/Mistral-7B-Instruct-v0.2"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = WhiteboxModel.from_pretrained(
-    "mistralai/Mistral-7B-Instruct-v0.2",
+    model_name,
     device_map="auto",
     torch_dtype=torch.bfloat16,
 )
@@ -34,41 +39,6 @@ def unc_to_confidence(uncertainties: np.ndarray):
     confidences = np.clip(confidences, 1, 10)
     confidences = np.round(confidences).astype(int)
     return confidences
-
-
-def construct_message(
-    question: str,
-    other_agents: List[Conversation],
-    other_confidences: np.ndarray,
-    conv_idx: int,
-) -> Message:
-    prefix_string = "These are solutions and confidence values from 1 to 10 (higher means more confident) to the problem from other agents: "
-
-    for agent, confidence in zip(other_agents, other_confidences):
-        agent_response = agent[conv_idx]["content"]
-        prefix_string += f"\n\n One agent solution (confidence level is {confidence}): ```{agent_response}```"
-
-    prefix_string += f"""
-
-Based off the opinion of other agents, can you provide an updated response? The original problem is:
-
-{question}
-
-Do not mention your confidence. The last line of your response should be of the following format: 'Answer: $INTEGER' (without quotes) where INTEGER is the integer answer."""
-
-    return {"role": "user", "content": prefix_string}
-
-
-def construct_assistant_message(completion) -> Message:
-    return {"role": "assistant", "content": completion}
-
-
-def generate_answer(answer_context):
-    prompt = tokenizer.apply_chat_template(
-        answer_context, tokenize=False, add_generation_prompt=True
-    )
-    out = estimate_uncertainty(model, ue_method, input_text=prompt)
-    return out.generation_text, out.uncertainty
 
 
 if __name__ == "__main__":
@@ -111,7 +81,7 @@ if __name__ == "__main__":
                         other_confidences = np.concatenate(
                             (confidences[:i], confidences[i + 1 :])
                         )
-                        message = construct_message(
+                        message = construct_message_prompt(
                             question,
                             other_agents=agent_contexts_other,
                             other_confidences=other_confidences,
@@ -119,7 +89,9 @@ if __name__ == "__main__":
                         )
                         agent_context.append(message)
 
-                    completion, uncertainty = generate_answer(agent_context)
+                    completion, uncertainty = generate_answer_uncertainty(
+                        agent_context, model, tokenizer, ue_method
+                    )
 
                     assistant_message = construct_assistant_message(completion)
                     assistant_message["uncertainty"] = uncertainty

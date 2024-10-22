@@ -5,39 +5,8 @@ import numpy as np
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
 from typing_extensions import NotRequired
 
-
-class RangeWeight(TypedDict):
-    start: int
-    end: int
-    weight: float
-
-
-class Message(TypedDict):
-    role: str
-    content: str
-    uncertainty: NotRequired[float]
-    range_weights: NotRequired[List[RangeWeight]]
-    confidence: NotRequired[float]
-
-
-Conversation = List[Message]
-
-Debate = List[Conversation]
-
-Debates = Dict[str, Tuple[Debate, str]]
-
-
-def get_len(
-    context: Conversation, tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast
-):
-    return (
-        len(
-            tokenizer.apply_chat_template(
-                context, tokenize=True, add_generation_prompt=True
-            )
-        )
-        - 4
-    )
+from debate.gen_utils import Conversation, Message, get_len
+from models.common import RangeWeight
 
 
 def read_jsonl(path: str):

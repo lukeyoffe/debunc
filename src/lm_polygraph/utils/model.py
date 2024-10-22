@@ -499,30 +499,13 @@ class WhiteboxModel(Model):
         Returns:
             dict[str, torch.Tensor]: tensors dictionary obtained by tokenizing input texts batch.
         """
-        model_type = self.model.config._name_or_path.lower()
-        if "falcon" in model_type or "llama" in model_type or "vicuna" in model_type:
-            prompted_texts = []
-            for text in texts:
-                if "llama" in model_type:
-                    template = LlamaPromptTemplate()
-                    template.add_user_message(text)
-                    prompted_texts.append(template.build_prompt())
-                elif "vicuna" in model_type:
-                    prompted_text = get_vicuna_prompt(text)
-                    prompted_texts.append(prompted_text)
-                else:
-                    prompted_texts.append(text)
-            tokenized = self.tokenizer(
-                prompted_texts,
-                truncation=True,
-                padding=True,
-                return_tensors="pt",
-                return_token_type_ids=False,
-            )
-        else:
-            tokenized = self.tokenizer(texts, padding=True, return_tensors="pt")
+        inputs = self.tokenizer.encode(
+            texts[0], add_special_tokens=False, return_tensors="pt"
+        )
 
-        return tokenized
+        return {
+            "input_ids": inputs,
+        }
 
 
 def create_ensemble(

@@ -3,13 +3,16 @@ import random
 from typing import List, Tuple
 
 import torch
-from debate.gsm8k.common import (
-    Conversation,
+from debate.gen_utils import (
     Debate,
     Debates,
-    Message,
+    RWJSONEncoder,
+    construct_assistant_message,
+    generate_answer_uncertainty,
+)
+from debate.gsm8k.common import (
+    construct_message_attention_others,
     format_question,
-    get_len,
     read_jsonl,
 )
 from debate.gsm8k.eval_gsm import parse_answer
@@ -20,72 +23,15 @@ from models.model import WhiteboxModel
 from tqdm import trange
 from transformers import AutoTokenizer
 
-tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
+model_name = "mistralai/Mistral-7B-Instruct-v0.2"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = WhiteboxModel.from_pretrained(
-    "mistralai/Mistral-7B-Instruct-v0.2",
+    model_name,
     device_map="auto",
     torch_dtype=torch.bfloat16,
 )
 
 ue_method = MeanTokenEntropy()
-
-
-def construct_message(
-    question: str,
-    this_agent: Conversation,
-    other_agents: List[Conversation],
-    other_confidences: List[float],
-    conv_idx: int,
-) -> Message:
-    this_agent = this_agent.copy()
-    this_agent.append({})
-
-    prefix_string = "These are solutions to the problem from other agents: "
-
-    this_agent[-1] = {"role": "user", "content": prefix_string}
-    current_len = get_len(this_agent, tokenizer)
-
-    range_weights = []
-    for agent, confidence in zip(other_agents, other_confidences):
-        agent_response = agent[conv_idx]["content"]
-        prefix_string += f"\n\n One agent solution: ```{agent_response}```"
-
-        this_agent[-1] = {"role": "user", "content": prefix_string}
-        new_len = get_len(this_agent, tokenizer)
-        range_weights.append(RangeWeight(current_len, new_len, confidence))
-        current_len = new_len
-
-    prefix_string += f"""
-
-Based off the opinion of other agents, can you provide an updated response? The original problem is:
-
-{question}
-
-The last line of your response should be of the following format: 'Answer: $INTEGER' (without quotes) where INTEGER is the integer answer."""
-
-    return {"role": "user", "content": prefix_string, "range_weights": range_weights}
-
-
-def construct_assistant_message(completion) -> Message:
-    return {"role": "assistant", "content": completion}
-
-
-def generate_answer(answer_context) -> Tuple[str, float]:
-    prompt = tokenizer.apply_chat_template(
-        answer_context, tokenize=False, add_generation_prompt=True
-    )
-    if "range_weights" in answer_context[-1]:
-        model.range_weights = answer_context[-1]["range_weights"]
-
-    out = estimate_uncertainty(model, ue_method, input_text=prompt)
-    return out.generation_text, out.uncertainty
-
-
-class RWJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, RangeWeight):
-            return obj.__dict__
-        return super().default(obj)
 
 
 if __name__ == "__main__":
@@ -136,16 +82,19 @@ if __name__ == "__main__":
                             agent_contexts[:i] + agent_contexts[i + 1 :]
                         )
                         other_confidences = confidences[:i] + confidences[i + 1 :]
-                        message = construct_message(
+                        message = construct_message_attention_others(
                             question,
                             this_agent=agent_context,
                             other_agents=agent_contexts_other,
                             other_confidences=other_confidences,
                             conv_idx=2 * round - 1,
+                            tokenizer=tokenizer,
                         )
                         agent_context.append(message)
 
-                    completion, _ = generate_answer(agent_context)
+                    completion, _ = generate_answer_uncertainty(
+                        agent_context, model, tokenizer, ue_method
+                    )
 
                     assistant_message = construct_assistant_message(completion)
                     parsed = parse_answer(completion)

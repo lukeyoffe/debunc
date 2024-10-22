@@ -10,6 +10,7 @@ git clone https://github.com/lukeyoffe/debunc.git
 cd debunc
 conda create --name debunc python=3.10 -y 
 conda activate debunc 
+pip install -U pip==24.0  
 pip install -e .
 ```
 

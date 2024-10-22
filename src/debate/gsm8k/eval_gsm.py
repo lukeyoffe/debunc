@@ -3,7 +3,7 @@ import re
 
 import numpy as np
 
-from eval_utils import (
+from debate.eval_utils import (
     get_uncertainties,
     get_uncertainties_round,
     mean_and_95ci,
@@ -49,7 +49,7 @@ def eval(filename, print_uncertainty_stats=True):
         for question, (responses, gt) in response_dict.items():
             gt = float(gt.replace(",", "").split("#### ")[1])
             pred_solutions = [response[-1]["content"] for response in responses]
-            if "standard" not in filename and "perfect" not in filename:
+            if "standard" not in filename and "oracle" not in filename:
                 cu, iu, fu = get_uncertainties(responses, gt, parse_answer)
                 correct_uncertainties.extend(cu)
                 incorrect_uncertainties.extend(iu)

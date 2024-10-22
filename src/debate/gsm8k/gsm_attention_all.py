@@ -4,13 +4,16 @@ from typing import List, Tuple
 
 import numpy as np
 import torch
-from debate.gsm8k.common import (
-    Conversation,
+from debate.gen_utils import (
     Debate,
     Debates,
-    Message,
+    RWJSONEncoder,
+    construct_assistant_message,
+    generate_answer_uncertainty,
+)
+from debate.gsm8k.common import (
+    construct_message_attention_all,
     format_question,
-    get_len,
     read_jsonl,
 )
 from lm_polygraph.estimators import MeanTokenEntropy, TokenSAR
@@ -20,9 +23,10 @@ from models.model import WhiteboxModel
 from tqdm import tqdm, trange
 from transformers import AutoTokenizer
 
-tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
+model_name = "mistralai/Mistral-7B-Instruct-v0.2"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = WhiteboxModel.from_pretrained(
-    "mistralai/Mistral-7B-Instruct-v0.2",
+    model_name,
     device_map="auto",
     torch_dtype=torch.bfloat16,
 )
@@ -30,71 +34,10 @@ model = WhiteboxModel.from_pretrained(
 ue_method = MeanTokenEntropy()
 
 
-def construct_message(
-    question: str,
-    this_agent: Conversation,
-    this_confidence: float,
-    other_agents: List[Conversation],
-    other_confidences: np.ndarray,
-    conv_idx: int,
-) -> Message:
-    range_weights = []
-    this_agent = this_agent.copy()
-    len_before_prev = get_len(this_agent[:-1], tokenizer) + 4
-    current_len = get_len(this_agent, tokenizer) + 3
-    range_weights.append(RangeWeight(len_before_prev, current_len, this_confidence))
-
-    prefix_string = "These are solutions to the problem from other agents: "
-
-    this_agent.append({"role": "user", "content": prefix_string})
-    current_len = get_len(this_agent, tokenizer)
-
-    for agent, confidence in zip(other_agents, other_confidences):
-        agent_response = agent[conv_idx]["content"]
-        prefix_string += f"\n\n One agent solution: ```{agent_response}```"
-
-        this_agent[-1] = {"role": "user", "content": prefix_string}
-        new_len = get_len(this_agent, tokenizer)
-        range_weights.append(RangeWeight(current_len, new_len, confidence))
-        current_len = new_len
-
-    prefix_string += f"""
-
-Based off the opinion of other agents, can you provide an updated response? The original problem is:
-
-{question}
-
-The last line of your response should be of the following format: 'Answer: $INTEGER' (without quotes) where INTEGER is the integer answer."""
-
-    return {"role": "user", "content": prefix_string, "range_weights": range_weights}
-
-
-def construct_assistant_message(completion) -> Message:
-    return {"role": "assistant", "content": completion}
-
-
-def generate_answer(answer_context) -> Tuple[str, float]:
-    prompt = tokenizer.apply_chat_template(
-        answer_context, tokenize=False, add_generation_prompt=True
-    )
-    if "range_weights" in answer_context[-1]:
-        model.range_weights = answer_context[-1]["range_weights"]
-
-    out = estimate_uncertainty(model, ue_method, input_text=prompt)
-    return out.generation_text, out.uncertainty
-
-
-class RWJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, RangeWeight):
-            return obj.__dict__
-        return super().default(obj)
-
-
 if __name__ == "__main__":
     agents = 3
     rounds = 3
-    trials = 5
+    trials = 1
 
     random.seed(0)
     questions = read_jsonl("./data/test.jsonl")
@@ -131,17 +74,20 @@ if __name__ == "__main__":
                         other_confidences = np.concatenate(
                             (confidences[:i], confidences[i + 1 :])
                         )
-                        message = construct_message(
+                        message = construct_message_attention_all(
                             question,
                             this_agent=agent_context,
                             this_confidence=confidences[i],
                             other_agents=agent_contexts_other,
                             other_confidences=other_confidences,
                             conv_idx=2 * round - 1,
+                            tokenizer=tokenizer,
                         )
                         agent_context.append(message)
 
-                    completion, uncertainty = generate_answer(agent_context)
+                    completion, uncertainty = generate_answer_uncertainty(
+                        agent_context, model, tokenizer, ue_method
+                    )
 
                     assistant_message = construct_assistant_message(completion)
                     assistant_message["uncertainty"] = uncertainty
@@ -152,7 +98,7 @@ if __name__ == "__main__":
                 json.dump(
                     all_trial_data,
                     open(
-                        f"gsm_{agents}_{rounds}_{trials}_attention_all_{ue_method.__class__.__name__}.json",
+                        f"gsm_{agents}_{rounds}_{trials}_attention_all_{ue_method.__class__.__name__}_part2.json",
                         "w",
                     ),
                     cls=RWJSONEncoder,

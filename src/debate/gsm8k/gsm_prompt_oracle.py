@@ -3,11 +3,15 @@ import random
 from typing import List
 
 import torch
-from debate.gsm8k.common import (
-    Conversation,
+from debate.gen_utils import (
     Debate,
     Debates,
-    Message,
+    RWJSONEncoder,
+    construct_assistant_message,
+    generate_answer_uncertainty,
+)
+from debate.gsm8k.common import (
+    construct_message_prompt,
     format_question,
     read_jsonl,
 )
@@ -18,49 +22,15 @@ from models.model import WhiteboxModel
 from tqdm import trange
 from transformers import AutoTokenizer
 
-tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
+model_name = "mistralai/Mistral-7B-Instruct-v0.2"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = WhiteboxModel.from_pretrained(
-    "mistralai/Mistral-7B-Instruct-v0.2",
+    model_name,
     device_map="auto",
     torch_dtype=torch.bfloat16,
 )
 
 ue_method = MeanTokenEntropy()
-
-
-def construct_message(
-    question: str,
-    other_agents: List[Conversation],
-    other_confidences: List[float],
-    conv_idx: int,
-) -> Message:
-    prefix_string = "These are solutions and confidence values from 1 to 10 (higher means more confident) to the problem from other agents: "
-
-    for agent, confidence in zip(other_agents, other_confidences):
-        agent_response = agent[conv_idx]["content"]
-        prefix_string += f"\n\n One agent solution (confidence level is {confidence}): ```{agent_response}```"
-
-    prefix_string += f"""
-
-Based off the opinion of other agents, can you provide an updated response? The original problem is:
-
-{question}
-
-Do not mention your confidence. The last line of your response should be of the following format: 'Answer: $INTEGER' (without quotes) where INTEGER is the integer answer."""
-
-    return {"role": "user", "content": prefix_string}
-
-
-def construct_assistant_message(completion) -> Message:
-    return {"role": "assistant", "content": completion}
-
-
-def generate_answer(answer_context):
-    prompt = tokenizer.apply_chat_template(
-        answer_context, tokenize=False, add_generation_prompt=True
-    )
-    out = estimate_uncertainty(model, ue_method, input_text=prompt)
-    return out.generation_text, out.uncertainty
 
 
 if __name__ == "__main__":
@@ -110,7 +80,7 @@ if __name__ == "__main__":
                             agent_contexts[:i] + agent_contexts[i + 1 :]
                         )
                         other_confidences = confidences[:i] + confidences[i + 1 :]
-                        message = construct_message(
+                        message = construct_message_prompt(
                             question,
                             other_agents=agent_contexts_other,
                             other_confidences=other_confidences,
@@ -118,7 +88,9 @@ if __name__ == "__main__":
                         )
                         agent_context.append(message)
 
-                    completion, _ = generate_answer(agent_context)
+                    completion, _ = generate_answer_uncertainty(
+                        agent_context, model, tokenizer, ue_method
+                    )
 
                     assistant_message = construct_assistant_message(completion)
                     parsed = parse_answer(completion)

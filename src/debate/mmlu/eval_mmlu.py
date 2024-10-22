@@ -1,17 +1,34 @@
-import json
-import re
 from collections import Counter
-
+import json
 import numpy as np
-
-from eval_utils import (
-    get_uncertainties,
-    get_uncertainties_round,
-    mean_and_95ci,
-    most_frequent,
-)
+import time
+import re
+import numpy as np
+import scipy.stats as stats
 
 np.set_printoptions(precision=3)
+
+
+def mean_and_95ci(data):
+    # Calculate the mean
+    mean = np.mean(data)
+
+    # Calculate the standard error of the mean
+    sem = stats.sem(data)
+
+    # Get the t-statistic for 95% confidence interval
+    confidence_level = 0.95
+    degrees_freedom = len(data) - 1
+    t_statistic = stats.t.ppf((1 + confidence_level) / 2, degrees_freedom)
+
+    # Calculate the margin of error
+    margin_of_error = t_statistic * sem
+
+    # Calculate the confidence interval
+    ci_lower = mean - margin_of_error
+    ci_upper = mean + margin_of_error
+
+    return mean, margin_of_error
 
 
 def parse_answer(input_str):
@@ -36,12 +53,32 @@ def compute_accuracy(gt, pred_solutions):
     return 1 if gt == pred_answer else 0
 
 
-counts = Counter()
+def most_frequent(ls):
+    count = Counter(ls)
+    most_common_element = count.most_common(1)[0][0]
+    return most_common_element
 
 
-def eval(filename):
-    counts.clear()
+def get_uncertainties(responses, gt):
+    correct_uncertainties = []
+    incorrect_uncertainties = []
+    fail_uncertainties = []
+    for agent_responses in responses:
+        for agent_response in agent_responses[1::2]:
+            parsed = parse_answer(agent_response["content"])
+            uncertainty = agent_response["uncertainty"]
+            if parsed is None:
+                fail_uncertainties.append(uncertainty)
+            elif parsed == gt:
+                correct_uncertainties.append(uncertainty)
+            else:
+                incorrect_uncertainties.append(uncertainty)
+    return correct_uncertainties, incorrect_uncertainties, fail_uncertainties
+
+
+def eval(filename, print_uncertainty_stats=True):
     trials = json.load(open(filename, "r"))
+    print(len(trials), len(trials[-1]))
     correct_uncertainties = []
     incorrect_uncertainties = []
     fail_uncertainties = []
@@ -50,8 +87,8 @@ def eval(filename):
         trial_accuracies = []
         for question, (responses, gt) in response_dict.items():
             pred_solutions = [response[-1]["content"] for response in responses]
-            if "standard" not in filename and "perfect" not in filename:
-                cu, iu, fu = get_uncertainties(responses, gt, parse_answer)
+            if "standard" not in filename and "oracle" not in filename:
+                cu, iu, fu = get_uncertainties(responses, gt)
                 correct_uncertainties.extend(cu)
                 incorrect_uncertainties.extend(iu)
                 fail_uncertainties.extend(fu)
@@ -60,73 +97,43 @@ def eval(filename):
         trial_accuracy = np.mean(trial_accuracies)
         accuracies.append(trial_accuracy)
 
-    mean, ci = mean_and_95ci(accuracies)
+    mean, margin = mean_and_95ci(accuracies)
 
     print(
         f"{mean:.3f}",
-        f"{ci[0]:.3f}",
-        f"{ci[1]:.3f}",
-        np.mean(correct_uncertainties) if correct_uncertainties else "N/A",
-        np.mean(incorrect_uncertainties) if correct_uncertainties else "N/A",
-        np.mean(fail_uncertainties) if correct_uncertainties else "N/A",
+        np.mean(correct_uncertainties),
+        np.mean(incorrect_uncertainties),
+        np.mean(fail_uncertainties),
     )
 
 
 def uncertainty_stats(filename):
-    np.set_printoptions(precision=3)
     trials = json.load(open(filename, "r"))
-    print(len(trials[-1]))
     correct_uncertainties = []
     incorrect_uncertainties = []
     fail_uncertainties = []
-    for response_dict in trials:
-        for question, (responses, gt) in response_dict.items():
-            if "standard" not in filename:
-                cu, iu, fu = get_uncertainties(responses, gt, parse_answer)
-                correct_uncertainties.extend(cu)
-                incorrect_uncertainties.extend(iu)
-                fail_uncertainties.extend(fu)
-
-    print(
-        np.mean(correct_uncertainties),
-        np.mean(incorrect_uncertainties + fail_uncertainties),
-        np.mean(incorrect_uncertainties + fail_uncertainties)
-        - np.mean(correct_uncertainties),
-    )
-    return correct_uncertainties, incorrect_uncertainties + fail_uncertainties
-
-
-def get_stats(filename):
-    trials = json.load(open(filename, "r"))
-    correct_uncertainties = [[], [], []]
-    incorrect_uncertainties = [[], [], []]
-    fail_uncertainties = [[], [], []]
     accuracies = []
     for response_dict in trials:
         trial_accuracies = []
         for question, (responses, gt) in response_dict.items():
             pred_solutions = [response[-1]["content"] for response in responses]
-            if "standard" not in filename and "perfect" not in filename:
-                cu, iu, fu = get_uncertainties_round(responses, gt, parse_answer)
-                for i in range(3):
-                    correct_uncertainties[i].extend(cu[i])
-                    incorrect_uncertainties[i].extend(iu[i])
-                    fail_uncertainties[i].extend(fu[i])
-
+            if "standard" not in filename and "oracle" not in filename:
+                cu, iu, fu = get_uncertainties(responses, gt)
+                correct_uncertainties.extend(cu)
+                incorrect_uncertainties.extend(iu)
+                fail_uncertainties.extend(fu)
             accuracy = compute_accuracy(gt, pred_solutions)
             trial_accuracies.append(accuracy)
         trial_accuracy = np.mean(trial_accuracies)
         accuracies.append(trial_accuracy)
-    mean, ci = mean_and_95ci(accuracies)
 
-    return {
-        "mean_accuracy": mean,
-        "correct_uncertainties": correct_uncertainties,
-        "incorrect_uncertainties": incorrect_uncertainties,
-        "fail_uncertainties": fail_uncertainties,
-    }
+    print(
+        np.mean(correct_uncertainties),
+        np.mean(incorrect_uncertainties),
+        np.mean(fail_uncertainties),
+    )
 
 
 if __name__ == "__main__":
-    FILENAME = ""
-    eval(FILENAME)
+    filename = "final/mmlu_3_3_5_prompt_MeanTokenEntropy_0shot.json"
+    eval(filename)
